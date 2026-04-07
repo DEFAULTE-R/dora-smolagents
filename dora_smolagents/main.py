@@ -1,8 +1,10 @@
 import json
+import argparse
+import os
+from dora import Node
 from smolagents import CodeAgent, Tool
 from smolagents.models import LiteLLMModel
 
-# --- Tools ---
 class MoveForwardTool(Tool):
     name = "move_forward"
     description = "Move the robot forward"
@@ -21,10 +23,9 @@ class StopTool(Tool):
     def forward(self):
         return {"action": "stop"}
 
-# --- Agent setup ---
 model = LiteLLMModel(
-    model="ollama/mistral",
-    api_base="http://localhost:11434"
+    model=os.getenv("MODEL", "ollama/mistral"),
+    api_base=os.getenv("OLLAMA_BASE", "http://localhost:11434")
 )
 
 agent = CodeAgent(
@@ -33,21 +34,28 @@ agent = CodeAgent(
     max_steps=1
 )
 
-# --- Dora node ---
-def handle_event(event):
-    if event["type"] == "INPUT" and event["id"] == "command":
-        command = event["value"]
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--name", default="dora-smolagents")
+    args = parser.parse_args()
 
-        result = agent.run(command)
+    node = Node(args.name)
 
-        # Extract clean action (fallback safe)
-        if isinstance(result, dict):
-            action = result
-        else:
-            action = {"action": "unknown"}
+    for event in node:
+        if event["type"] == "INPUT" and event["id"] == "command":
+            command = event["value"]
+            result = agent.run(command)
 
-        return {
-            "type": "OUTPUT",
-            "id": "action",
-            "value": json.dumps(action)
-        }
+            if isinstance(result, dict):
+                action = result
+            else:
+                action = {"action": "unknown"}
+
+            node.send_output(
+                "action",
+                json.dumps(action),
+                event.get("metadata", {})
+            )
+
+if __name__ == "__main__":
+    main()

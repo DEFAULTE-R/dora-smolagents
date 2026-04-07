@@ -1,0 +1,13 @@
+[project]
+name = "dora-smolagents"
+version = "0.1.0"
+description = "Dora node for smolagents-based agent with Ollama support"
+authors = [{name = "DEFAULTE-R"}]
+dependencies = [
+    "dora-rs",
+    "smolagents",
+    "litellm"
+]
+
+[project.scripts]
+dora-smolagents = "dora_smolagents.main:main"
